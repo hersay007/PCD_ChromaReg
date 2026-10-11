@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChromaReg-Studio | Interactive Graph Coloring Register Allocator</title>
+  <meta name="description" content="Innovative Register Allocation using Chaitin-Briggs Graph Coloring with Liveness Analysis, Spill Cost Heuristic, Coalescing, and RISC-V/x86 Machine Code Emission.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="logo-badge">CR</div>
+      <div class="title-group">
+        <h1>ChromaReg-Studio</h1>
+        <p>Principles of Compiler Design &bull; Graph Coloring Register Allocator & Optimizer</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge cyan">Chaitin-Briggs Engine</span>
+      <span class="badge emerald">RV32I & x86-64 Dual Target</span>
+      <span class="badge purple">Conservative Coalescing</span>
+    </div>
+  </header>
+
+  <!-- Interactive Control Toolbar -->
+  <section class="toolbar">
+    <div class="toolbar-group">
+      <span class="control-label">Benchmark:</span>
+      <select id="preset-select" class="select-input" aria-label="Select benchmark preset"></select>
+
+      <span class="control-label" style="margin-left: 8px;">Registers K:</span>
+      <div class="slider-container">
+        <input type="range" id="k-slider" min="2" max="8" value="3" step="1">
+        <span id="k-display" class="slider-val">3</span>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="control-label">Algorithm:</span>
+      <select id="algo-select" class="select-input">
+        <option value="briggs">Briggs Optimistic (Recommended)</option>
+        <option value="chaitin">Chaitin Pessimistic</option>
+        <option value="greedy">Greedy First-Fit</option>
+      </select>
+
+      <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; margin-left: 6px;">
+        <input type="checkbox" id="coalesce-toggle" checked>
+        <span>Coalescing</span>
+      </label>
+
+      <span class="control-label" style="margin-left: 8px;">Target:</span>
+      <select id="target-select" class="select-input">
+        <option value="riscv">RISC-V (RV32I)</option>
+        <option value="x86">x86-64 Intel</option>
+      </select>
+    </div>
+
+    <div class="toolbar-group">
+      <button id="btn-reset" class="btn" title="Reset to beginning">Reset</button>
+      <button id="btn-step-back" class="btn" title="Step backward">◀ Back</button>
+      <button id="btn-step-forward" class="btn btn-primary" title="Step forward">Step ▶</button>
+      <button id="btn-play" class="btn" title="Auto play">Play ⏯</button>
+      <button id="btn-solve-all" class="btn" title="Solve immediately" style="border-color: var(--accent-cyan);">Solve All ⚡</button>
+    </div>
+  </section>
+
+  <!-- Main Three-Panel Workspace -->
+  <main class="main-container">
+
+    <!-- Left Panel: Intermediate Code (3AC) Editor -->
+    <section class="panel panel-left">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📝 3-Address Code (TAC)</span>
+        </div>
+        <span id="instruction-count-badge" class="badge cyan">0 instrs</span>
+      </div>
+      <div class="panel-content">
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+          Edit code below or select a preset. Variables will be automatically analyzed.
+        </p>
+        <div class="code-editor-wrapper">
+          <textarea id="ir-editor" class="code-textarea" spellcheck="false" placeholder="Enter TAC instructions here..."></textarea>
+        </div>
+        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <button id="btn-compile" class="btn btn-primary" style="width: 100%;">Recompile & Rebuild RIG</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Panel: Register Interference Graph (RIG) Visualizer -->
+    <section class="panel panel-center">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>⚡ Register Interference Graph (RIG)</span>
+        </div>
+        <div class="playback-controls">
+          <span id="step-indicator" class="step-counter">Step 0 / 0</span>
+        </div>
+      </div>
+
+      <!-- Step Rationale Box -->
+      <div class="playback-bar" style="background: rgba(15, 23, 42, 0.95);">
+        <div id="step-description-box" style="flex: 1;">
+          <h4 id="step-title" style="font-size: 0.85rem; color: var(--accent-cyan); margin-bottom: 2px;">Ready</h4>
+          <p id="step-detail" style="font-size: 0.75rem; color: var(--text-muted);">Load a benchmark or click 'Step' to begin the compiler coloring trace.</p>
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div class="graph-container">
+        <canvas id="rig-canvas"></canvas>
+        <div class="graph-overlay-controls">
+          <button id="btn-zoom-in" class="btn-icon" title="Zoom in">+</button>
+          <button id="btn-zoom-out" class="btn-icon" title="Zoom out">-</button>
+          <button id="btn-center-graph" class="btn-icon" title="Center graph">⊙</button>
+        </div>
+      </div>
+
+      <!-- Color Legend Bar -->
+      <div class="legend-bar" id="legend-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Right Panel: Dataflow Matrix, Codegen & Compiler Analytics -->
+    <section class="panel panel-right">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-asm">Target Assembly</button>
+        <button class="tab-btn" data-tab="tab-liveness">Liveness Matrix</button>
+        <button class="tab-btn" data-tab="tab-metrics">Metrics & Proof</button>
+        <button class="tab-btn" data-tab="tab-stack">Coloring Stack</button>
+      </div>
+
+      <div class="panel-content" style="padding: 12px;">
+
+        <!-- Tab 1: Emitted Machine Code -->
+        <div id="tab-asm" class="tab-pane active">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span id="asm-target-badge" class="badge emerald">RISC-V RV32I</span>
+            <span id="asm-stats-badge" style="font-size: 0.75rem; color: var(--text-muted);">Frame: 16B</span>
+          </div>
+          <div class="asm-code-block" id="asm-code-display">
+            <!-- Emitted assembly code -->
+          </div>
+          <div style="margin-top: 10px; font-size: 0.75rem; color: var(--text-dim); display: flex; gap: 12px;">
+            <span><span style="color: var(--accent-rose);">■</span> Red: Spill Reload (lw)</span>
+            <span><span style="color: var(--accent-amber);">■</span> Yellow: Spill Store (sw)</span>
+          </div>
+        </div>
+
+        <!-- Tab 2: Liveness Dataflow Matrix -->
+        <div id="tab-liveness" class="tab-pane">
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+            Backward fixed-point dataflow equations: <br/>
+            <code>In[i] = Uses[i] ∪ (Out[i] \ Defs[i])</code>
+          </p>
+          <div class="data-table-wrapper">
+            <table class="data-table" id="liveness-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Instruction</th>
+                  <th>Defs</th>
+                  <th>Uses</th>
+                  <th>Live-Out</th>
+                </tr>
+              </thead>
+              <tbody id="liveness-table-body">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Metrics & Formal Proof Dashboard -->
+        <div id="tab-metrics" class="tab-pane">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="title">Allocated Regs</span>
+              <span id="metric-regs" class="value emerald">0 / 3</span>
+            </div>
+            <div class="metric-card">
+              <span class="title">Variables Spilled</span>
+              <span id="metric-spills" class="value rose">0</span>
+            </div>
+            <div class="metric-card">
+              <span class="title">Memory Traffic</span>
+              <span id="metric-traffic" class="value amber">0 ops</span>
+            </div>
+            <div class="metric-card">
+              <span class="title">Max Clique ω(G)</span>
+              <span id="metric-clique" class="value cyan">0</span>
+            </div>
+          </div>
+
+          <div class="step-card" style="margin-top: 6px;">
+            <h4>Theoretical Principle:</h4>
+            <p style="font-size: 0.75rem; line-height: 1.5;">
+              By the Max-Clique Lower Bound theorem, the chromatic number <b>χ(G) ≥ ω(G)</b>. 
+              If the maximum clique size <code>ω(G) > K</code>, spilling to stack memory is mathematically guaranteed for any optimal allocator!
+            </p>
+          </div>
+
+          <div class="step-card" style="margin-top: 8px;">
+            <h4>Spill Cost Heuristic:</h4>
+            <p style="font-size: 0.75rem; line-height: 1.5;">
+              <code>Cost(v) = ((defs + uses) × 10<sup>depth</sup>) / degree(v)</code><br/>
+              Variables inside loop bodies are weighted exponentially higher to prevent thrashing the memory bus during loop execution.
+            </p>
+          </div>
+        </div>
+
+        <!-- Tab 4: Coloring Stack Visualizer -->
+        <div id="tab-stack" class="tab-pane">
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+            Active Simplification Stack (top to bottom):
+          </p>
+          <div class="coloring-stack-view" id="stack-items-container">
+            <div style="font-size: 0.75rem; color: var(--text-dim); text-align: center; padding: 12px;">Stack Empty</div>
+          </div>
+          <div id="coalesce-info-box" style="font-size: 0.75rem; color: var(--text-muted);">
+            <!-- Coalesced aliases -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Interactive Floating Tooltip -->
+  <div id="graph-tooltip"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    ChromaReg-Studio &bull; Principles of Compiler Design Assignment Project &bull; Built with Chaitin-Briggs Graph Coloring, Liveness Dataflow, and RISC-V/x86 Machine Code Emitters.
+  </footer>
+
+  <!-- Main ES Module Script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

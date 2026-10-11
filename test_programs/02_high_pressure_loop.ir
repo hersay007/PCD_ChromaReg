@@ -1,0 +1,16 @@
+# Test Case 2: High Register Pressure Loop
+# Demonstrates loop-depth weighted spill costs and long live ranges.
+# Variables inside loop bodies have 10x higher spill penalty.
+
+sum = 0
+i = 0
+limit = 100
+step = 1
+factor = 5
+L_LOOP:
+temp = i * factor
+sum = sum + temp
+i = i + step
+cond = i < limit
+if cond goto L_LOOP
+return sum

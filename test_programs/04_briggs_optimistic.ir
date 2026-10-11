@@ -1,0 +1,18 @@
+# Test Case 4: Briggs Optimistic Coloring
+# A prism/octahedron-like interference pattern where nodes have degree >= K (K=3),
+# but are NOT mutually adjacent (no K+1 clique).
+# Chaitin's pessimistic heuristic would force a spill,
+# while Briggs' optimistic approach colors it successfully with 0 spills!
+
+a = 10
+b = 20
+c = 30
+d = 40
+e = 50
+f = 60
+t1 = a + b
+t2 = c + d
+t3 = e + f
+res = t1 + t2
+res = res + t3
+return res

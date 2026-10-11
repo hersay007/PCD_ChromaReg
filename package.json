@@ -1,0 +1,23 @@
+{
+  "name": "chromareg-studio",
+  "version": "1.0.0",
+  "description": "Interactive Graph Coloring Register Allocation & Compiler Optimization Suite",
+  "type": "module",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "python3 -m unittest discover -s compiler_core",
+    "cli": "python3 compiler_core/cli.py"
+  },
+  "keywords": [
+    "compiler-design",
+    "register-allocation",
+    "graph-coloring",
+    "chaitin-briggs",
+    "liveness-analysis",
+    "riscv",
+    "x86"
+  ],
+  "author": "Compiler Design Practical",
+  "license": "MIT"
+}

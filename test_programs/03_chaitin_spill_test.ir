@@ -1,0 +1,14 @@
+# Test Case 3: Chaitin Mandatory Spill
+# 5 variables simultaneously live at the final addition.
+# Under K=3 physical registers, spilling to stack memory is unavoidable.
+
+v1 = 1
+v2 = 2
+v3 = 3
+v4 = 4
+v5 = 5
+ans = v1 + v2
+ans = ans + v3
+ans = ans + v4
+ans = ans + v5
+return ans

@@ -1,0 +1,10 @@
+# Test Case 5: Conservative Copy Coalescing (Briggs/George)
+# Contains register copies (y = x) that can be merged
+# if the merged node does not create an uncolorable degree spike.
+
+base = 100
+offset = 4
+ptr = base
+target = ptr + offset
+val = target * 2
+return val
